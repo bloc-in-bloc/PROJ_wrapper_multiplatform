@@ -1,0 +1,17 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "macos",
+            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "displayName": "Macos",
+            "description": "",
+            "generator": "Xcode",
+            "binaryDir": "${sourceDir}/build_mac",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel",
+                "CMAKE_OSX_ARCHITECTURES": "arm64"
+            }
+        }
+    ]
+}
