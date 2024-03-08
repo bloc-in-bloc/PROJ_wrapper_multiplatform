@@ -13,6 +13,7 @@ on:
   workflow_dispatch:
 
 env:
+  LIBRARY_NAME: 'PROJ_wrapper_multiplatform'
   VCPKG_COMMIT_ID: 'd8160798747ac9953d3374f9473393868d76dfe6'
 
 jobs:
@@ -28,140 +29,115 @@ jobs:
       uses: lukka/run-vcpkg@v11
       id: runvcpkg
       with:
+        vcpkgDirectory: '${{github.workspace}}/vcpkg'
         vcpkgGitCommitId: ${{env.VCPKG_COMMIT_ID}}
-        runVcpkgInstall: true
         vcpkgJsonGlob: 'vcpkg.json'
 
-    - name: configure_mac
-      run: cmake . -B build_mac -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-    - name: build_mac
-      run: cmake --build build_mac --config MinSizeRel --target PROJ_wrapper_multiplatform
+    - name: Build mac
+      uses: lukka/run-cmake@v10
+      with:
+        configurePreset: 'macos'
+        buildPreset: 'macos-release'
 
-    - name: configure_ios
-      run: cmake -B build_ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DPLUGIN_EMBED_BITCODE=ON
-    - name: build_ios
-      run: cmake --build build_ios --config MinSizeRel --target PROJ_wrapper_multiplatform -- ONLY_ACTIVE_ARCH=NO
+    - name: Build ios
+      uses: lukka/run-cmake@v10
+      with:
+        configurePreset: 'ios'
+        buildPreset: 'ios-release'
 
     - name: package_apple
       run: |
-        mkdir PROJ_wrapper_multiplatform_apple
-        mkdir PROJ_wrapper_multiplatform_apple/x86_64
-        mv build_mac/PROJ_wrapper_multiplatform.bundle PROJ_wrapper_multiplatform_apple/x86_64
-        mkdir PROJ_wrapper_multiplatform_apple/iOS
-        mv build_ios/MinSizeRel-iphoneos/libPROJ_wrapper_multiplatform.a PROJ_wrapper_multiplatform_apple/iOS
+        mkdir ${{env.LIBRARY_NAME}}_apple
+        mkdir ${{env.LIBRARY_NAME}}_apple/x86_64
+        mv build_mac/MinSizeRel/${{env.LIBRARY_NAME}}.bundle ${{env.LIBRARY_NAME}}_apple/x86_64
+        mkdir ${{env.LIBRARY_NAME}}_apple/iOS
+        mv build_ios/MinSizeRel-iphoneos/lib${{env.LIBRARY_NAME}}.a ${{env.LIBRARY_NAME}}_apple/iOS
     - uses: actions/upload-artifact@v3
       with:
-        name: PROJ_wrapper_multiplatform_apple
-        path: PROJ_wrapper_multiplatform_apple
+        name: ${{env.LIBRARY_NAME}}_apple
+        path: ${{env.LIBRARY_NAME}}_apple
 
   windows:
     runs-on: windows-2022
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: true
 
-    - name: configure_win_64
-      run: cmake . -G "Visual Studio 17 2022" -A x64 -Bbuild_win_64
-    - name: build_win_64
-      run: cmake --build build_win_64 --config MinSizeRel --target PROJ_wrapper_multiplatform
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      id: runvcpkg
+      with:
+        vcpkgDirectory: '${{github.workspace}}/vcpkg'
+        vcpkgGitCommitId: ${{env.VCPKG_COMMIT_ID}}
+        vcpkgJsonGlob: 'vcpkg.json'
 
-    # Universal Windows Platform
-    - name: configure_uwp_arm64
-      run: cmake . -G "Visual Studio 17 2022" -A ARM64 -Bbuild_uwp_arm64 -DCMAKE_SYSTEM_NAME:String=WindowsStore -DCMAKE_SYSTEM_VERSION:String="10.0"
-    - name: build_uwp_arm64
-      run: cmake --build build_uwp_arm64 --config MinSizeRel --target PROJ_wrapper_multiplatform
-
-    - name: configure_uwp_arm
-      run: cmake . -G "Visual Studio 17 2022" -A ARM -Bbuild_uwp_arm -DCMAKE_SYSTEM_NAME:String=WindowsStore -DCMAKE_SYSTEM_VERSION:String="10.0"
-    - name: build_uwp_arm
-      run: cmake --build build_uwp_arm --config MinSizeRel --target PROJ_wrapper_multiplatform
-
-    - name: configure_uwp_x64
-      run: cmake . -G "Visual Studio 17 2022" -A x64 -Bbuild_uwp_x64 -DCMAKE_SYSTEM_NAME:String=WindowsStore -DCMAKE_SYSTEM_VERSION:String="10.0"
-    - name: build_uwp_x64
-      run: cmake --build build_uwp_x64 --config MinSizeRel --target PROJ_wrapper_multiplatform
-
-    - name: configure_uwp_x86
-      run: cmake . -G "Visual Studio 17 2022" -A Win32 -Bbuild_uwp_x86 -DCMAKE_SYSTEM_NAME:String=WindowsStore -DCMAKE_SYSTEM_VERSION:String="10.0"
-    - name: build_uwp_x86
-      run: cmake --build build_uwp_x86 --config MinSizeRel --target PROJ_wrapper_multiplatform
+    - name: Build win 64
+      uses: lukka/run-cmake@v10
+      with:
+        configurePreset: 'win64'
+        buildPreset: 'win64-release'
 
     - name: package_win
       run: |
-        mkdir PROJ_wrapper_multiplatform_win/x86_64
-        mkdir PROJ_wrapper_multiplatform_win/WSA/ARM64
-        mkdir PROJ_wrapper_multiplatform_win/WSA/ARM
-        mkdir PROJ_wrapper_multiplatform_win/WSA/x64
-        mkdir PROJ_wrapper_multiplatform_win/WSA/x86
-        mv build_win_64\MinSizeRel\PROJ_wrapper_multiplatform.dll PROJ_wrapper_multiplatform_win/x86_64
-        mv build_uwp_arm64\MinSizeRel\PROJ_wrapper_multiplatform.dll PROJ_wrapper_multiplatform_win/WSA/ARM64
-        mv build_uwp_arm\MinSizeRel\PROJ_wrapper_multiplatform.dll PROJ_wrapper_multiplatform_win/WSA/ARM
-        mv build_uwp_x64\MinSizeRel\PROJ_wrapper_multiplatform.dll PROJ_wrapper_multiplatform_win/WSA/x64
-        mv build_uwp_x86\MinSizeRel\PROJ_wrapper_multiplatform.dll PROJ_wrapper_multiplatform_win/WSA/x86
+        mkdir ${{env.LIBRARY_NAME}}_win/x86_64
+        mv build_win_64\MinSizeRel\${{env.LIBRARY_NAME}}.dll ${{env.LIBRARY_NAME}}_win/x86_64
     - uses: actions/upload-artifact@v3
       with:
-        name: PROJ_wrapper_multiplatform_win
-        path: PROJ_wrapper_multiplatform_win
+        name: ${{env.LIBRARY_NAME}}_win
+        path: ${{env.LIBRARY_NAME}}_win
 
-  linux:
-    runs-on: ubuntu-20.04
+  android:
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: true
 
     - name: apt_install
       run: |
         sudo apt-get -qq update
         sudo apt-get -qq install libzstd-dev ninja-build
-    - name: configure_linux_64
-      run: cmake . -G Ninja -B build_linux_64 -DCMAKE_BUILD_TYPE=MinSizeRel
-    - name: build_linux_64
-      run: cmake --build build_linux_64 --target PROJ_wrapper_multiplatform
 
-    # Android
     - name: install Android NDK
       uses: nttld/setup-ndk@v1
       id: setup-ndk
       with:
-        ndk-version: r21e
+        ndk-version: r26c
         add-to-path: false
 
-    - name: configure_android_arm64-v8a
-      run: >
-        cmake -B build_android_arm64-v8a
-        -DANDROID_ABI=arm64-v8a
-        -DCMAKE_BUILD_TYPE=MinSizeRel
-        -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
-        -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
-    - name: build_android_arm64-v8a
-      run: cmake --build build_android_arm64-v8a --target PROJ_wrapper_multiplatform
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      id: runvcpkg
+      with:
+        vcpkgDirectory: '${{github.workspace}}/vcpkg'
+        vcpkgGitCommitId: ${{env.VCPKG_COMMIT_ID}}
+        vcpkgJsonGlob: 'vcpkg.json'
 
-    - name: configure_android_armeabi-v7a
-      run: >
-        cmake -B build_android_armeabi-v7a
-        -DANDROID_ABI=armeabi-v7a
-        -DCMAKE_BUILD_TYPE=MinSizeRel
-        -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
-        -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
-    - name: build_android_armeabi-v7a
-      run: cmake --build build_android_armeabi-v7a --target PROJ_wrapper_multiplatform
+    - name: Build android arm64 v8a
+      uses: lukka/run-cmake@v10
+      with:
+        configurePreset: 'android_arm64-v8a'
+        configurePresetAdditionalArgs: "['-DANDROID_ABI=arm64-v8a']"
+        buildPreset: 'android_arm64-v8a-release'
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        VCPKG_DEFAULT_TRIPLET: arm64-android
 
-    # Linux and Android artifact 
+    # Android artifact
     - name: package_linux
       run: |
-        mkdir -p PROJ_wrapper_multiplatform_linux/x86_64
-        mv build_linux_64/libPROJ_wrapper_multiplatform.so PROJ_wrapper_multiplatform_linux/x86_64
-        mkdir -p PROJ_wrapper_multiplatform_linux/Android/libs/arm64-v8a
-        mkdir -p PROJ_wrapper_multiplatform_linux/Android/libs/armeabi-v7a
-        mv build_android_arm64-v8a/libPROJ_wrapper_multiplatform.so PROJ_wrapper_multiplatform_linux/Android/libs/arm64-v8a
-        mv build_android_armeabi-v7a/libPROJ_wrapper_multiplatform.so PROJ_wrapper_multiplatform_linux/Android/libs/armeabi-v7a
+        mkdir -p ${{env.LIBRARY_NAME}}_linux/Android/libs/arm64-v8a
+        mv build_android_arm64-v8a/lib${{env.LIBRARY_NAME}}.so ${{env.LIBRARY_NAME}}_linux/Android/libs/arm64-v8a
     - uses: actions/upload-artifact@v3
       with:
-        name: PROJ_wrapper_multiplatform_linux
-        path: PROJ_wrapper_multiplatform_linux
+        name: ${{env.LIBRARY_NAME}}_linux
+        path: ${{env.LIBRARY_NAME}}_linux
 
   combine:
     name: combine artifacts
     runs-on: ubuntu-20.04
-    needs: [mac, windows, linux]
+    needs: [mac, windows, android]
     steps:
       - name: download artifacts
         uses: actions/download-artifact@v3
@@ -172,24 +148,24 @@ jobs:
         working-directory: artifacts
       - name: combine
         run: |
-          mkdir PROJ_wrapper_multiplatform
-          cp -r artifacts/PROJ_wrapper_multiplatform_apple/* PROJ_wrapper_multiplatform
-          cp -r artifacts/PROJ_wrapper_multiplatform_win/* PROJ_wrapper_multiplatform
-          cp -r artifacts/PROJ_wrapper_multiplatform_linux/* PROJ_wrapper_multiplatform
+          mkdir ${{env.LIBRARY_NAME}}
+          cp -r artifacts/${{env.LIBRARY_NAME}}_apple/* ${{env.LIBRARY_NAME}}
+          cp -r artifacts/${{env.LIBRARY_NAME}}_win/* ${{env.LIBRARY_NAME}}
+          cp -r artifacts/${{env.LIBRARY_NAME}}_linux/* ${{env.LIBRARY_NAME}}
       - name: zip
-        run: zip -r PROJ_wrapper_multiplatform.zip PROJ_wrapper_multiplatform
+        run: zip -r ${{env.LIBRARY_NAME}}.zip ${{env.LIBRARY_NAME}}
       - uses: AButler/upload-release-assets@v2.0
         if: github.event_name == 'release' && github.event.action == 'created'
         with:
-          files: PROJ_wrapper_multiplatform.zip
+          files: ${{env.LIBRARY_NAME}}.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v3
         with:
-          name: PROJ_wrapper_multiplatform.zip
-          path: PROJ_wrapper_multiplatform.zip
+          name: ${{env.LIBRARY_NAME}}.zip
+          path: ${{env.LIBRARY_NAME}}.zip
       - uses: geekyeggo/delete-artifact@v2
         with:
           name: |
-            PROJ_wrapper_multiplatform_apple
-            PROJ_wrapper_multiplatform_win
-            PROJ_wrapper_multiplatform_linux
+            ${{env.LIBRARY_NAME}}_apple
+            ${{env.LIBRARY_NAME}}_win
+            ${{env.LIBRARY_NAME}}_linux

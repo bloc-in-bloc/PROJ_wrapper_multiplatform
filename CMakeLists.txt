@@ -27,7 +27,7 @@ elseif(WIN32)
     target_compile_definitions(
             PROJ_wrapper_multiplatform
             PRIVATE
-            "DLL_EXPORT=__declspec(dllexport)"
+            "DLL_EXPORT_MACRO=__declspec(dllexport)"
     )
 endif()
 
