@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - main
+      - f/class-wrapper
   # Also trigger on release created events
   release:
     types:
