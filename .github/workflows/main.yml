@@ -125,11 +125,23 @@ jobs:
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         VCPKG_DEFAULT_TRIPLET: arm64-android
 
+    - name: Build android armeabi-v7a
+      uses: lukka/run-cmake@v10
+      with:
+        configurePreset: 'android_armeabi-v7a'
+        configurePresetAdditionalArgs: "['-DANDROID_ABI=armeabi-v7a']"
+        buildPreset: 'android_armeabi-v7a-release'
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        VCPKG_DEFAULT_TRIPLET: arm-neon-android
+
     # Android artifact
     - name: package_linux
       run: |
         mkdir -p ${{env.LIBRARY_NAME}}_linux/Android/libs/arm64-v8a
         mv build_android_arm64-v8a/lib${{env.LIBRARY_NAME}}.so ${{env.LIBRARY_NAME}}_linux/Android/libs/arm64-v8a
+        mkdir -p ${{env.LIBRARY_NAME}}_linux/Android/libs/armeabi-v7a
+        mv build_android_armeabi-v7a/lib${{env.LIBRARY_NAME}}.so ${{env.LIBRARY_NAME}}_linux/Android/libs/armeabi-v7a
     - uses: actions/upload-artifact@v3
       with:
         name: ${{env.LIBRARY_NAME}}_linux
