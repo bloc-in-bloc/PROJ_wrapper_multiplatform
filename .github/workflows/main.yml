@@ -19,7 +19,7 @@ env:
 
 jobs:
   mac:
-    runs-on: macos-11
+    runs-on: macos-13
 
     steps:
     - uses: actions/checkout@v3
